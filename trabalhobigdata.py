@@ -1,9 +1,3 @@
-# -*- coding: utf-8 -*-
-"""
-Created on Tue Apr  8 19:04:20 2025
-
-@author: Gustavo
-"""
 import tkinter as tk
 from tkinter import ttk
 import pandas as pd
@@ -24,34 +18,81 @@ df_rj = df[(df['uf'] == 'RJ') & (df['municipio'] == 'RIO DE JANEIRO')]
 # Conta todas as ocorrências por tipo de crime
 contagem_crimes = df_rj['evento'].value_counts()
 
-# Cria a interface gráfica
+
 def mostrar_interface():
     root = tk.Tk()
     root.title("Criminalidade - Município do Rio de Janeiro")
-    root.geometry("900x700")
+    root.state("zoomed")  # Janela cheia
 
-    frame = ttk.Frame(root, padding=10)
-    frame.pack(fill=tk.BOTH, expand=True)
+    root.configure(bg="#f0f0f0")
 
-    lbl = ttk.Label(frame, text="Todos os tipos de crimes no Município do RJ", font=("Arial", 14))
-    lbl.pack(pady=10)
+    style = ttk.Style()
+    style.configure("TFrame", background="#f0f0f0")
+    style.configure("TLabel", background="#f0f0f0", font=("Arial", 14))
+    style.configure("TButton", font=("Arial", 12), padding=6)
 
-    txt = tk.Text(frame, height=15)
-    txt.pack(fill=tk.X, expand=False)
+    # Canvas principal com scrollbar
+    canvas = tk.Canvas(root, bg="#f0f0f0", highlightthickness=0)
+    canvas.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
+
+    scrollbar = ttk.Scrollbar(root, orient=tk.VERTICAL, command=canvas.yview)
+    scrollbar.pack(side=tk.RIGHT, fill=tk.Y)
+    canvas.configure(yscrollcommand=scrollbar.set)
+
+    scrollable_frame = ttk.Frame(canvas)
+    canvas.create_window((0, 0), window=scrollable_frame, anchor="n")
+
+    def on_configure(event):
+        canvas.configure(scrollregion=canvas.bbox("all"))
+
+    scrollable_frame.bind("<Configure>", on_configure)
+
+    # Conteúdo centralizado com largura máxima
+    content = ttk.Frame(scrollable_frame, width=1100)
+    content.pack(anchor="n", pady=20)
+
+    # Texto com scrollbar
+    text_frame = ttk.Frame(content)
+    text_frame.pack(fill=tk.BOTH, expand=False, pady=10)
+
+    scroll_y = tk.Scrollbar(text_frame, orient=tk.VERTICAL)
+    txt = tk.Text(text_frame, height=15, wrap=tk.WORD, yscrollcommand=scroll_y.set,
+                  font=("Consolas", 11), background="#ffffff", foreground="#333333")
+    scroll_y.config(command=txt.yview)
+
+    txt.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
+    scroll_y.pack(side=tk.RIGHT, fill=tk.Y)
+
     txt.insert(tk.END, contagem_crimes.to_string())
+    txt.config(state=tk.DISABLED)
 
-    # Exibe os 10 crimes mais comuns em gráfico
-    fig, ax = plt.subplots(figsize=(8, 4))
-    contagem_crimes.head(10).plot(kind='bar', ax=ax, color='purple')
+    # Gráfico com redimensionamento
+    graph_frame = ttk.Frame(content)
+    graph_frame.pack(fill=tk.BOTH, expand=True, padx=10, pady=10)
+
+    fig, ax = plt.subplots(figsize=(10, 5))
+    contagem_crimes.head(10).plot(kind='bar', ax=ax, color='mediumpurple')
     ax.set_title("Top 10 Crimes no Município do RJ")
     ax.set_ylabel("Quantidade")
     ax.set_xlabel("Tipo de Crime")
-    plt.xticks(rotation=45)
 
-    canvas = FigureCanvasTkAgg(fig, master=frame)
-    canvas.draw()
-    canvas.get_tk_widget().pack(fill=tk.BOTH, expand=True)
+    ax.set_xticklabels(ax.get_xticklabels(), rotation=45, ha='right')
+    fig.tight_layout(pad=3)  # Ajusta espaçamento para não cortar texto
+
+    canvas_graph = FigureCanvasTkAgg(fig, master=graph_frame)
+    canvas_widget = canvas_graph.get_tk_widget()
+    canvas_widget.pack(fill=tk.BOTH, expand=True)  # Agora redimensiona com a janela
+    canvas_graph.draw()
+
+    lbl = ttk.Label(content, text="Todos os tipos de crimes no Município do RJ", font=("Arial", 16, "bold"))
+    lbl.pack(pady=10)
+
+    
+    # Botão de sair
+    btn_sair = ttk.Button(content, text="Fechar", command=root.destroy)
+    btn_sair.pack(pady=20)
 
     root.mainloop()
+
 
 mostrar_interface()
